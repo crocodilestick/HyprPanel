@@ -220,12 +220,18 @@ export class MatugenService {
             let colors = parsedResult.colors;
 
             // Extract hex values from mode-based color objects
-            // Matugen always returns objects with {dark, default, light} structure where values are hex strings
+            // Matugen v3 returns objects with {dark, default, light} structure
+            // Matugen v2 returns simple hex strings
             const processedColors: Record<string, string> = {};
             for (const [key, value] of Object.entries(colors)) {
-                const obj = value as Record<string, string>;
-                // Extract hex from mode-based color object {dark, default, light}
-                processedColors[key] = obj[mode] ?? obj.default;
+                if (typeof value === 'string') {
+                    // Handle Matugen v2 (direct string value)
+                    processedColors[key] = value;
+                } else {
+                    // Handle Matugen v3 (object with mode variants)
+                    const obj = value as Record<string, string>;
+                    processedColors[key] = obj[mode] ?? obj.default;
+                }
             }
             colors = processedColors;
 
