@@ -47,10 +47,10 @@ export const AccessPoint = ({ connecting, accessPoint }: AccessPointProps): JSX.
 
     // Scrolling Logic
     const ssid = accessPoint.ssid ?? '';
-    const scrollLimit = 20;
+    const scrollLimit = 14;
     const needsScrolling = ssid.length > scrollLimit;
 
-    const labelText = Variable(needsScrolling ? ssid.substring(0, scrollLimit) + "..." : ssid);
+    const labelText = Variable(ssid);
     derivedVars.push(labelText);
 
     const isHovered = Variable(false);
@@ -83,11 +83,7 @@ export const AccessPoint = ({ connecting, accessPoint }: AccessPointProps): JSX.
             scrollInterval.cancel();
             scrollInterval = null;
         }
-        if (needsScrolling) {
-            labelText.set(ssid.substring(0, scrollLimit) + "...");
-        } else {
-            labelText.set(ssid);
-        }
+        labelText.set(ssid);
     };
 
     const hoverSub = isHovered.subscribe((hovered) => {
@@ -114,6 +110,8 @@ export const AccessPoint = ({ connecting, accessPoint }: AccessPointProps): JSX.
                     halign={Gtk.Align.START}
                     label={bind(labelText)}
                     tooltipText={ssid}
+                    truncate
+                    maxWidthChars={14}
                 />
                 <revealer revealChild={bind(showStatusVar)}>
                     <label
