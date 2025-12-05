@@ -1,4 +1,4 @@
-import { bind, Variable } from 'astal';
+import { bind, Variable, interval, AstalIO } from 'astal';
 import AstalNetwork from 'gi://AstalNetwork?version=0.1';
 import { NetworkService } from 'src/services/network';
 import { Astal, Gtk } from 'astal/gtk3';
@@ -45,6 +45,56 @@ export const AccessPoint = ({ connecting, accessPoint }: AccessPointProps): JSX.
     );
     derivedVars.push(showSpinnerVar);
 
+    // Scrolling Logic
+    const ssid = accessPoint.ssid ?? '';
+    const scrollLimit = 20;
+    const needsScrolling = ssid.length > scrollLimit;
+
+    const labelText = Variable(needsScrolling ? ssid.substring(0, scrollLimit) + "..." : ssid);
+    derivedVars.push(labelText);
+
+    const isHovered = Variable(false);
+    derivedVars.push(isHovered);
+
+    let scrollInterval: AstalIO.Time | null = null;
+
+    const startScrolling = () => {
+        if (!needsScrolling) return;
+        if (scrollInterval) return;
+
+        let offset = 0;
+        const padded = ssid + "     ";
+
+        scrollInterval = interval(200, () => {
+            offset++;
+            if (offset >= padded.length) offset = 0;
+
+            const end = offset + scrollLimit;
+            let sub = padded.substring(offset, end);
+            if (sub.length < scrollLimit) {
+                sub += padded.substring(0, scrollLimit - sub.length);
+            }
+            labelText.set(sub);
+        });
+    };
+
+    const stopScrolling = () => {
+        if (scrollInterval) {
+            scrollInterval.cancel();
+            scrollInterval = null;
+        }
+        if (needsScrolling) {
+            labelText.set(ssid.substring(0, scrollLimit) + "...");
+        } else {
+            labelText.set(ssid);
+        }
+    };
+
+    const hoverSub = isHovered.subscribe((hovered) => {
+        if (hovered) startScrolling();
+        else stopScrolling();
+    });
+
     const ConnectionIcon = (): JSX.Element => {
         return (
             <label
@@ -62,9 +112,8 @@ export const AccessPoint = ({ connecting, accessPoint }: AccessPointProps): JSX.
                     className="active-connection"
                     valign={Gtk.Align.CENTER}
                     halign={Gtk.Align.START}
-                    truncate
-                    wrap
-                    label={accessPoint.ssid ?? ''}
+                    label={bind(labelText)}
+                    tooltipText={ssid}
                 />
                 <revealer revealChild={bind(showStatusVar)}>
                     <label
@@ -82,6 +131,8 @@ export const AccessPoint = ({ connecting, accessPoint }: AccessPointProps): JSX.
     return (
         <button
             className="network-element-item"
+            onHover={() => isHovered.set(true)}
+            onHoverLost={() => isHovered.set(false)}
             onClick={(_: Astal.Button, event: Astal.ClickEvent) => {
                 networkService.wifi.connectToAP(accessPoint, event);
             }}
@@ -91,6 +142,8 @@ export const AccessPoint = ({ connecting, accessPoint }: AccessPointProps): JSX.
                         isDestroying = true;
                         // Drop all derived Variables to prevent memory leaks
                         derivedVars.forEach((v) => v.drop());
+                        hoverSub();
+                        if (scrollInterval) scrollInterval.cancel();
                     }
                 });
             }}
