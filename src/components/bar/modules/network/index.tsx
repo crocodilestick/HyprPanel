@@ -35,7 +35,13 @@ const Network = (): BarBoxChild => {
 
             bind(networkService, 'state'),
             bind(networkService, 'connectivity'),
-            ...(networkService.wifi !== null ? [bind(networkService.wifi, 'enabled')] : []),
+            ...(networkService.wifi !== null
+                ? [
+                      bind(networkService.wifi, 'enabled'),
+                      bind(networkService.wifi, 'activeAccessPoint'),
+                      bind(networkService.wifi, 'ssid'),
+                  ]
+                : []),
         ],
         (primaryNetwork, showLabel, trunc, tSize, showWifiInfo) => {
             if (!showLabel) {
